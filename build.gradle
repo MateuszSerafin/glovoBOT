@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+}
+
+group 'com.gmail.genek530'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.squareup.okhttp3:okhttp:3.14.6'
+    implementation 'com.jsoniter:jsoniter:0.9.23'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'com.gmail.genek530.Main'
+        )
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
