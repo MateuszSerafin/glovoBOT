@@ -1,15 +1,13 @@
 package com.gmail.genek530.commons;
 
-public class reponse {
-
+public class response {
+    //this class should be returned by urlhelper whenever request is done
     //IF FALSE STRING ERRROR
     //IF TRUE STRING OUTPUT
     private boolean success;
     private String string;
 
-
-
-    public reponse(boolean success, String string){
+    public response(boolean success, String string){
         this.success = success;
         this.string = string;
     }

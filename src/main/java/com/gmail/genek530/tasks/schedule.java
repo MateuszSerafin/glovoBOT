@@ -1,18 +1,15 @@
 package com.gmail.genek530.tasks;
 
-import com.gmail.genek530.commons.reponse;
-import com.gmail.genek530.commons.urlhelper;
-import com.gmail.genek530.container;
+import com.gmail.genek530.commons.response;
+import com.gmail.genek530.commons.urlHelper;
+import com.gmail.genek530.userContainer;
 import com.jsoniter.JsonIterator;
 import com.jsoniter.any.Any;
 
-import java.io.IOException;
-import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class schedule {
 
@@ -20,30 +17,30 @@ public class schedule {
     //this is bug from their api or just some weird abuse prevention
     HashMap<String, Integer> doneIDs = new HashMap<String, Integer>();
 
-    container containerInstance;
+    userContainer userContainerInstance;
 
-    urlhelper urlhelp;
+    urlHelper urlhelp;
 
     private final String tosend = "{\"booked\":true,\"storeAddressId\":%s}";
 
     private ExecutorService executor;
 
-    public schedule(container container, urlhelper urlhelper, ExecutorService executorService, ArrayList<container> kontenery){
-        this.containerInstance = container;
+    public schedule(userContainer userContainer, urlHelper urlhelper, ExecutorService executorService, ArrayList<userContainer> kontenery){
+        this.userContainerInstance = userContainer;
         this.urlhelp = urlhelper;
         this.executor = executorService;
         this.kontenery = kontenery;
     }
 
-    private ArrayList<container> kontenery;
+    private ArrayList<userContainer> kontenery;
 
-    //Skanowanie co 10 sekund checkowanie ID wymaga innej implementacji
+    //checkSchedule and if found hour take this hour + inform other users in ArrayList<userContainer> about available hour
+    //Up to 3 couriers could take some hours, at least that's how it was in my city.
     public boolean checkSchedule(){
         try {
-            reponse prbablyJson = urlhelp.reqBezwejscia(urlhelper.glovoURL.CALENDAR.gettype(), urlhelper.requestTYP.GET.getUrl(), true, true);
+            response prbablyJson = urlhelp.requestWithInput(urlHelper.glovoURL.CALENDAR.gettype(), urlHelper.requestType.GET.getUrl(), true, true);
             Any any  = JsonIterator.deserialize(prbablyJson.getString());
 
-            //todo
             for(Any Day : any.get("days")){
                 for(Any slot : Day.get("slots")){
                     //System.out.println(String.format("%s %s", Day.get("name"), slot.get("id").toString()));
@@ -57,25 +54,21 @@ public class schedule {
                         }
                         String address = slot.get("addresses").toString();
 
-
                         byte[] tosendBytes = String.format(tosend, address).getBytes(StandardCharsets.UTF_8);
 
-                        for(container kont : kontenery){
+                        for(userContainer kont : kontenery){
                             executor.submit(new Runnable() {
                                 @Override
                                 public void run() {
                                     try {
-                                        System.out.println(kont.urlherlper.reqZwejsciemiwyjesciem(urlhelper.glovoURL.SLOT.getSlot(slotID), urlhelper.requestTYP.PUT.getUrl(), tosendBytes,true, false).getString());
+                                        System.out.println(kont.urlherlper.requestWithoutOutput(urlHelper.glovoURL.SLOT.getSlot(slotID), urlHelper.requestType.PUT.getUrl(), tosendBytes,true, false).getString());
                                     } catch (Exception e) {
                                         throw new RuntimeException(e);
                                     }
                                 }
                             });
                         }
-
-
-
-                        containerInstance.log(String.format("slotID %s", slotID));
+                        userContainerInstance.log(String.format("slotID %s", slotID));
                         int toadd = frommap + 1;
                         doneIDs.put(slotID, toadd);
                     }
@@ -83,7 +76,7 @@ public class schedule {
             };
             return true;
         } catch (Exception e) {
-            containerInstance.log(String.format("checkSchedule exception %s", e.toString()));
+            userContainerInstance.log(String.format("checkSchedule exception %s", e.toString()));
             return false;
         }
     }

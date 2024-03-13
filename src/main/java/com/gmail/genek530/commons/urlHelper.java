@@ -1,31 +1,27 @@
 package com.gmail.genek530.commons;
 
-import com.gmail.genek530.container;
-import com.jsoniter.JsonIterator;
+import com.gmail.genek530.userContainer;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
 import static com.gmail.genek530.commons.utils.returnGMDtime;
 
-public class urlhelper {
+public class urlHelper {
+    //responsible for handling sending and receiving requests
+
     public enum glovoURL {
         LOGIN("https://api.glovoapp.com/oauth/token"),
         DEVICEID("https://api.glovoapp.com/v3/devices"),
         CALENDAR("https://api.glovoapp.com/v3/scheduling/calendar"),
         SLOT("https://api.glovoapp.com/v3/scheduling/slots/"),
-
         REVOKE("https://api.glovoapp.com/oauth/revoke");
 
         private String url;
@@ -37,44 +33,40 @@ public class urlhelper {
         public String gettype() {
             return url;
         }
-
-
-        //Sloty wymagaja url z koncowka jako ID czyli /slot/123123 np.
+        
+        //Slots require ID at the end, /slot/12312 as example, so it just appends to it.
         public String getSlot(String ID){
             return url + ID;
         }
 
     }
-    public enum requestTYP {
+    public enum requestType {
         GET("GET"),
         POST("POST"),
         PUT("PUT");
 
         private String url;
 
-        requestTYP(String envUrl) {
+        requestType(String envUrl) {
             this.url = envUrl;
         }
 
         public String getUrl() {
             return url;
         }
-
     }
 
     private String dynamicSessionId;
-    //Bedzie zmieniane z "" na ID z glovo
     private String deviceID = "";
 
-    //kazdy relog == pusty deviceID (tak bylo w api jak debugowal)
+    //every relogin deviceID was empty. 
     public void resetdeviceID(){deviceID = "";};
 
     public void setDeviceID(String deviceID){
         this.deviceID = deviceID;
     }
-
-
-    //important can change
+    
+    //those tokens are dynamic and change sometimes 
     private String authorization;
     private String refreshToken;
 
@@ -91,17 +83,15 @@ public class urlhelper {
         return refreshToken;
     }
 
-    container container;
+    userContainer userContainer;
 
-    public urlhelper(container container,String dynamicSessionId){
-        this.container = container;
+    public urlHelper(userContainer userContainer, String dynamicSessionId){
+        this.userContainer = userContainer;
         this.dynamicSessionId = dynamicSessionId;
     }
     //all headers that are static
     private final Map<String,String> reusableHeader = new HashMap<String, String>() {{
-        //wszystkie nulle wymagaja manualnego ustawienia plus moglem to przesortowac jakos ale imo w kolejnosci moga sprawdzac w requescie czy cos tam nie znam sie
-        //jezeli bedzie zbanowawane potencjalnie wina tego
-        //todo to teoretycznie moze byc unsafe
+        //Those nulls bellow needs setting later on, filled header parameters that i could
         put("Host","api.glovoapp.com");
         put("glovo-app-platform","Android");
         put("glovo-app-version", "2.173.0");
@@ -134,11 +124,9 @@ public class urlhelper {
             beforeAddingheaders.setRequestProperty("if-modified-since", czas); //without adding if-modified since only today times are shown rather whole week.
         }
     }
-
-
+    
     private AtomicInteger requestLIMIT = new AtomicInteger(0);
     private HttpsURLConnection firstStage(String glovoUrl, String requestTYPE, boolean authorization, boolean modifiedTime) throws Exception {
-
         if(requestLIMIT.get() > 100){
             throw new Exception("API ");
         }
@@ -162,7 +150,7 @@ public class urlhelper {
         }
         return inputStream;
     }
-    private reponse handleOutput(HttpsURLConnection connection) throws IOException {
+    private response handleOutput(HttpsURLConnection connection) throws IOException {
         int response = connection.getResponseCode();
         boolean responseBool = false;
         boolean gzip = false;
@@ -182,10 +170,10 @@ public class urlhelper {
         while ((read = inputStream.read(buf)) != -1) {
             b.append(new String(buf, 0, read));
         }
-        return new reponse(responseBool, b.toString());
+        return new response(responseBool, b.toString());
     }
 
-    public reponse reqZwejsciemiwyjesciem(String glovoUrl, String requestTYPE, byte[] json,boolean authorization, boolean modifiedTime) throws Exception {
+    public response requestWithoutOutput(String glovoUrl, String requestTYPE, byte[] json, boolean authorization, boolean modifiedTime) throws Exception {
         HttpsURLConnection connection = firstStage(glovoUrl, requestTYPE, authorization, modifiedTime);
         connection.setDoOutput(true);
         connection.setDoInput(true);
@@ -193,7 +181,7 @@ public class urlhelper {
         return handleOutput(connection);
     }
 
-    public reponse reqBezwejscia(String glovoUrl, String requestTYPE, boolean authorization, boolean modifiedTime) throws Exception {
+    public response requestWithInput(String glovoUrl, String requestTYPE, boolean authorization, boolean modifiedTime) throws Exception {
         HttpsURLConnection connection = firstStage(glovoUrl, requestTYPE, authorization, modifiedTime);
         connection.setDoOutput(true);
         connection.setDoInput(true);
